@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rooster">
+<meta name="theme-color" content="#c0272d">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon192.png">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Rooster Scheduler</title>
+<style>
+  :root {
+    --red:    #c0272d;
+    --yellow: #f5c518;
+    --green:  #25a244;
+    --blue:   #1a73e8;
+    --white:  #ffffff;
+    --off:    #f5f5f5;
+    --border: #e2e2e2;
+    --text:   #1a1a1a;
+    --muted:  #999;
+    --font-d: 'Bebas Neue', sans-serif;
+    --font-b: 'Heebo', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--white); font-family: var(--font-b); color: var(--text); }
+
+  /* ── Header ── */
+  .header {
+    background: var(--red); padding: 14px 18px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  .header-left { display: flex; flex-direction: column; }
+  .header-title { font-family: var(--font-d); font-size: 38px; letter-spacing: 4px; color: var(--yellow); line-height: 1; }
+  .header-sub { font-size: 10px; color: rgba(255,255,255,0.65); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .header-badge {
+    background: rgba(255,255,255,0.15); border-radius: 20px;
+    padding: 5px 12px; font-size: 12px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .header-badge .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #aaa;
+    transition: background .3s;
+  }
+  .header-badge .dot.active { background: #4cff7e; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Body ── */
+  .body { padding: 16px; display: flex; flex-direction: column; gap: 14px;
+          padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+
+  /* ── Setup card ── */
+  .setup-card {
+    background: #f0f4ff; border: 1.5px solid #c5d5f5; border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .setup-title { font-size: 11px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .8px; }
+  .setup-row { display: flex; flex-direction: column; gap: 4px; }
+  .setup-row label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
+  .setup-row input {
+    width: 100%; background: #fff; border: 1.5px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: var(--font-b); font-size: 13px;
+    padding: 9px 12px; outline: none; direction: ltr;
+  }
+  .setup-row input:focus { border-color: var(--blue); }
+  .setup-actions { display: flex; gap: 8px; align-items: center; }
+  .btn-save {
+    padding: 9px 18px; background: var(--blue); border: none; border-radius: 8px;
+    color: #fff; font-family: var(--font-b); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn-save:active { background: #1557b0; }
+  .setup-status { font-size: 12px; color: var(--muted); flex: 1; }
+  .setup-status.ok { color: var(--green); }
+  .setup-status.err { color: var(--red); }
+
+  /* ── Push permission card ── */
+  .push-card {
+    background: #fffbf0; border: 1.5px solid #f0d070; border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .push-title { font-size: 13px; font-weight: 700; color: #7a5c00; }
+  .push-sub { font-size: 12px; color: #8a6800; line-height: 1.5; }
+  .btn-push {
+    width: 100%; padding: 12px; background: #e07b00; border: none; border-radius: 9px;
+    color: #fff; font-family: var(--font-d); font-size: 18px; letter-spacing: 1.5px;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn-push:active { background: #c06a00; }
+
+  /* ── Section title ── */
+  .section-title {
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .8px;
+    padding-bottom: 6px; border-bottom: 1.5px solid var(--off);
+  }
+
+  /* ── Scheduled list ── */
+  .sched-list { display: flex; flex-direction: column; gap: 10px; }
+  .sched-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
+
+  .sched-item {
+    background: var(--off); border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden;
+  }
+  .sched-item::before {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 4px;
+  }
+  .sched-item.pending::before  { background: var(--blue); }
+  .sched-item.sent::before     { background: var(--green); }
+  .sched-item.failed::before   { background: var(--red); }
+
+  .sched-item-top { display: flex; align-items: center; justify-content: space-between; }
+  .sched-item-phone { font-weight: 700; font-size: 15px; direction: ltr; }
+  .sched-item-time {
+    font-family: var(--font-d); font-size: 16px; letter-spacing: .5px; color: var(--blue);
+  }
+  .sched-item.sent  .sched-item-time { color: var(--green); }
+  .sched-item.failed .sched-item-time { color: var(--red); }
+
+  .sched-item-preview { font-size: 13px; color: #555; direction: rtl; text-align: right; line-height: 1.4; }
+  .sched-item-footer { display: flex; align-items: center; justify-content: space-between; }
+  .sched-item-status {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  }
+  .sched-item.pending .sched-item-status { color: var(--blue); }
+  .sched-item.sent    .sched-item-status { color: var(--green); }
+  .sched-item.failed  .sched-item-status { color: var(--red); }
+
+  .btn-open-wa {
+    padding: 6px 12px; background: #25d366; border: none; border-radius: 7px;
+    color: #fff; font-family: var(--font-b); font-size: 12px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 5px;
+    transition: background .15s;
+  }
+  .btn-open-wa:active { background: #1da851; }
+
+  /* ── Refresh button ── */
+  .btn-refresh {
+    width: 100%; padding: 11px; background: none; border: 1.5px solid var(--border);
+    border-radius: 9px; color: var(--muted); font-family: var(--font-b);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .btn-refresh:active { border-color: var(--blue); color: var(--blue); }
+
+  /* ── Install banner (iOS) ── */
+  .install-banner {
+    background: #f0f4ff; border: 1.5px solid #c5d5f5; border-radius: 12px;
+    padding: 14px 16px; font-size: 12px; color: #444; line-height: 1.6;
+    display: none;
+  }
+  .install-banner.visible { display: block; }
+  .install-banner strong { color: var(--blue); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: max(20px, env(safe-area-inset-bottom));
+    left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #222; color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    transition: transform .3s; z-index: 999; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-title">ROOSTER</div>
+    <div class="header-sub">Scheduler</div>
+  </div>
+  <div class="header-badge">
+    <span class="dot" id="connDot"></span>
+    <span id="connLabel">מתחבר...</span>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- iOS install hint -->
+  <div class="install-banner" id="installBanner">
+    <strong>📲 התקן כאפליקציה:</strong> לחץ על <strong>שתף ⬆️</strong> → <strong>"הוסף למסך הבית"</strong> לחווית אפליקציה מלאה עם התראות.
+  </div>
+
+  <!-- Supabase setup -->
+  <div class="setup-card" id="setupCard">
+    <div class="setup-title">⚙️ חיבור Supabase</div>
+    <div class="setup-row">
+      <label>Project URL</label>
+      <input type="url" id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="setup-row">
+      <label>Anon Key</label>
+      <input type="password" id="sbKey" placeholder="eyJhbGci..." autocomplete="off">
+    </div>
+    <div class="setup-actions">
+      <button class="btn-save" id="btnSave">שמור</button>
+      <span class="setup-status" id="setupStatus">לא מוגדר</span>
+    </div>
+  </div>
+
+  <!-- Push permission -->
+  <div class="push-card" id="pushCard" style="display:none">
+    <div class="push-title">🔔 התראות Push</div>
+    <div class="push-sub">כדי לקבל התראה כשהגיע זמן לשלוח הודעה, יש לאשר התראות.</div>
+    <button class="btn-push" id="btnPush">🔔 אפשר התראות</button>
+  </div>
+
+  <!-- Scheduled list -->
+  <div class="section-title">תזמונים קרובים</div>
+  <div class="sched-list" id="schedList">
+    <div class="sched-empty">טוען...</div>
+  </div>
+
+  <button class="btn-refresh" id="btnRefresh">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    רענן רשימה
+  </button>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const LS_URL = 'rooster_sb_url'
+const LS_KEY = 'rooster_sb_key'
+const LS_SUB = 'rooster_push_sub'
+
+let sbUrl = localStorage.getItem(LS_URL) || ''
+let sbKey = localStorage.getItem(LS_KEY) || ''
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, ms = 2500) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  setTimeout(() => el.classList.remove('show'), ms)
+}
+
+// ── iOS install hint ──────────────────────────────────────────
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+const isStandalone = window.navigator.standalone
+if (isIos && !isStandalone) {
+  document.getElementById('installBanner').classList.add('visible')
+}
+
+// ── Supabase request ──────────────────────────────────────────
+async function sbReq(method, path, body) {
+  const url = sbUrl.replace(/\/$/, '') + '/rest/v1/' + path
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': sbKey,
+      'Authorization': 'Bearer ' + sbKey,
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  })
+  if (!res.ok) { const t = await res.text(); throw new Error(t) }
+  if (res.status === 204) return null
+  const ct = res.headers.get('content-type') || ''
+  if (ct.includes('json')) return res.json()
+  return null
+}
+
+// ── Connection status ─────────────────────────────────────────
+async function checkConnection() {
+  const dot   = document.getElementById('connDot')
+  const label = document.getElementById('connLabel')
+  if (!sbUrl || !sbKey) {
+    dot.className = 'dot'; label.textContent = 'לא מחובר'; return false
+  }
+  try {
+    await sbReq('GET', 'scheduled_messages?limit=1')
+    dot.className = 'dot active'; label.textContent = 'מחובר'
+    return true
+  } catch {
+    dot.className = 'dot'; label.textContent = 'שגיאה'
+    return false
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+if (sbUrl) document.getElementById('sbUrl').value = sbUrl
+if (sbKey) document.getElementById('sbKey').value = sbKey
+
+// ── Save config ───────────────────────────────────────────────
+document.getElementById('btnSave').addEventListener('click', async () => {
+  const url = document.getElementById('sbUrl').value.trim()
+  const key = document.getElementById('sbKey').value.trim()
+  if (!url || !key) { toast('נא למלא URL ו-Key'); return }
+  sbUrl = url; sbKey = key
+  localStorage.setItem(LS_URL, url)
+  localStorage.setItem(LS_KEY, key)
+  const status = document.getElementById('setupStatus')
+  status.textContent = 'בודק...'
+  const ok = await checkConnection()
+  status.textContent = ok ? '✓ מחובר' : '✗ שגיאה'
+  status.className = 'setup-status ' + (ok ? 'ok' : 'err')
+  if (ok) {
+    document.getElementById('pushCard').style.display = 'block'
+    loadList()
+  }
+})
+
+// ── Service Worker + Push ─────────────────────────────────────
+const VAPID_PUBLIC = '__VAPID_PUBLIC_KEY__'  // replaced at deploy
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return null
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js')
+    return reg
+  } catch (e) {
+    console.error('SW register failed', e)
+    return null
+  }
+}
+
+async function subscribePush() {
+  const reg = await registerSW()
+  if (!reg) { toast('Service Worker לא נתמך'); return }
+
+  const permission = await Notification.requestPermission()
+  if (permission !== 'granted') { toast('ההרשאה נדחתה'); return }
+
+  try {
+    let sub = await reg.pushManager.getSubscription()
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+      })
+    }
+
+    const subJson = sub.toJSON()
+    // Save to Supabase
+    await sbReq('POST', 'push_subscriptions', {
+      endpoint: subJson.endpoint,
+      p256dh:   subJson.keys.p256dh,
+      auth:     subJson.keys.auth
+    })
+    localStorage.setItem(LS_SUB, JSON.stringify(subJson))
+    document.getElementById('pushCard').style.display = 'none'
+    toast('✓ התראות מופעלות!')
+  } catch (e) {
+    toast('שגיאה: ' + e.message)
+  }
+}
+
+document.getElementById('btnPush').addEventListener('click', subscribePush)
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+}
+
+// ── Mark as sent (from SW postMessage) ───────────────────────
+navigator.serviceWorker?.addEventListener('message', async evt => {
+  if (evt.data?.type === 'MARK_SENT' && evt.data.msgId) {
+    try {
+      await sbReq('PATCH', `scheduled_messages?id=eq.${evt.data.msgId}`, {
+        status: 'sent', sent_at: new Date().toISOString()
+      })
+      loadList()
+    } catch {}
+  }
+})
+
+// ── Load scheduled list ───────────────────────────────────────
+async function loadList() {
+  const list = document.getElementById('schedList')
+  if (!sbUrl || !sbKey) {
+    list.innerHTML = '<div class="sched-empty">הגדר Supabase כדי לראות תזמונים</div>'
+    return
+  }
+  list.innerHTML = '<div class="sched-empty">טוען...</div>'
+  try {
+    const rows = await sbReq('GET', 'scheduled_messages?order=send_at.asc&limit=50')
+    if (!rows || !rows.length) {
+      list.innerHTML = '<div class="sched-empty">אין תזמונים עדיין</div>'
+      return
+    }
+    list.innerHTML = ''
+    rows.forEach(row => {
+      const item = document.createElement('div')
+      item.className = 'sched-item ' + (row.status || 'pending')
+      const dt = new Date(row.send_at)
+      const dtStr = dt.toLocaleDateString('he-IL') + ' ' + dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      const msgs = Array.isArray(row.messages) ? row.messages : [row.messages]
+      const preview = msgs[0] || ''
+      const statusLabel = { pending: '⏳ ממתין', sent: '✓ נשלח', failed: '✗ נכשל' }[row.status] || row.status
+      const waUrl = `https://wa.me/${row.phone}?text=${encodeURIComponent(msgs[0] || '')}`
+
+      item.innerHTML = `
+        <div class="sched-item-top">
+          <span class="sched-item-phone">${row.phone}</span>
+          <span class="sched-item-time">${dtStr}</span>
+        </div>
+        <div class="sched-item-preview">${preview}${msgs.length > 1 ? ' <em style="color:#999">(+' + (msgs.length-1) + ' עוד)</em>' : ''}</div>
+        <div class="sched-item-footer">
+          <span class="sched-item-status">${statusLabel}</span>
+          ${row.status === 'pending' ? `<a href="${waUrl}" target="_blank" class="btn-open-wa">📱 WhatsApp</a>` : ''}
+        </div>
+      `
+      list.appendChild(item)
+    })
+  } catch (e) {
+    list.innerHTML = `<div class="sched-empty" style="color:#c0272d">שגיאה: ${e.message}</div>`
+  }
+}
+
+document.getElementById('btnRefresh').addEventListener('click', loadList)
+
+// ── Auto-refresh every 60s ────────────────────────────────────
+setInterval(loadList, 60000)
+
+// ── Init ──────────────────────────────────────────────────────
+registerSW()
+checkConnection().then(ok => {
+  if (ok) {
+    document.getElementById('pushCard').style.display =
+      Notification.permission === 'granted' ? 'none' : 'block'
+    loadList()
+  }
+})
+</script>
+</body>
+</html>
