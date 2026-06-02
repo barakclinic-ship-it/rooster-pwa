@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Rooster">
 <meta name="theme-color" content="#c0272d">
@@ -172,11 +173,13 @@
 </head>
 <body>
 
-<div class="header">
-  <div class="header-left">
+<div class="header" style="gap:12px;padding:10px 16px 10px 12px;">
+  <img src="/logo.png" style="height:56px;width:56px;object-fit:contain;flex-shrink:0;">
+  <div class="header-left" style="flex:1;">
     <div class="header-title">ROOSTER</div>
     <div class="header-sub">Scheduler</div>
   </div>
+  <button id="gearBtn" onclick="var c=document.getElementById('setupCard');c.style.display=c.style.display==='none'?'flex':'none'" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;color:#fff;width:32px;height:32px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">⚙️</button>
   <div class="header-badge">
     <span class="dot" id="connDot"></span>
     <span id="connLabel">מתחבר...</span>
@@ -191,7 +194,7 @@
   </div>
 
   <!-- Supabase setup -->
-  <div class="setup-card" id="setupCard">
+  <div class="setup-card" id="setupCard" style="display:none">
     <div class="setup-title">⚙️ חיבור Supabase</div>
     <div class="setup-row">
       <label>Project URL</label>
@@ -292,6 +295,7 @@ async function checkConnection() {
 
 // ── Init ──────────────────────────────────────────────────────
 if (sbUrl) document.getElementById('sbUrl').value = sbUrl
+if (!sbUrl || !sbKey) { document.getElementById('setupCard').style.display = 'flex'; }
 if (sbKey) document.getElementById('sbKey').value = sbKey
 
 // ── Save config ───────────────────────────────────────────────
@@ -314,7 +318,8 @@ document.getElementById('btnSave').addEventListener('click', async () => {
 })
 
 // ── Service Worker + Push ─────────────────────────────────────
-const VAPID_PUBLIC = 'BJ_jU8Vrq0kJ7HxTOJgjL1EHha6f5qhnWkQCRsC7QxP2r-VrIcNrV0TQK0jqC-2REB2u2Ew2QO7ZFaQPykV-I6M'
+const VAPID_PUBLIC = 'BJ_jU8Vrq0kJ7HxTOJgjL1EHha6f5qhnWkQCRsC7QxP2r-VrIcNrV0TQK0jqC-2REB2u2Ew2QO7ZFaQPykV-I6M'  // replaced at deploy
+
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return null
   try {
@@ -360,17 +365,10 @@ async function subscribePush() {
 document.getElementById('btnPush').addEventListener('click', subscribePush)
 
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/')
-  const rawData = atob(base64)
-  const outputArray = new Uint8Array(rawData.length)
-  for (let i = 0; i < rawData.length; i++) {
-    outputArray[i] = rawData.charCodeAt(i)
-  }
-  return outputArray
-}
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
 }
 
 // ── Mark as sent (from SW postMessage) ───────────────────────
